@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Premium Streaming Viewer",
-  description: "A high-performance streaming viewer for your favorite events.",
+  title: "Fans Futbol",
+  description: "Un reproductor de streaming de alto rendimiento para tus eventos favoritos.",
 };
 
 export default function RootLayout({

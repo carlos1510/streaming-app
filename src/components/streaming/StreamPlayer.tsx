@@ -12,10 +12,10 @@ interface StreamPlayerProps {
 }
 
 const ANTI_SANDBOX_DOMAINS = [
-    'stream196tp.com',
-    'streamtp10.com',
-    'la14hd.com',
-    'goolhd.com'
+  'stream196tp.com',
+  'streamtp10.com',
+  'la14hd.com',
+  'goolhd.com'
 ];
 
 export default function StreamPlayer({ url: initialUrl, name, streams, onClose }: StreamPlayerProps) {
@@ -65,7 +65,7 @@ export default function StreamPlayer({ url: initialUrl, name, streams, onClose }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-sm animate-in fade-in duration-300">
-      <div 
+      <div
         ref={containerRef}
         className="relative w-full h-full flex flex-col bg-black shadow-2xl"
       >
@@ -76,12 +76,12 @@ export default function StreamPlayer({ url: initialUrl, name, streams, onClose }
               <span className="text-primary mr-2">LIVE:</span> {name}
             </h2>
             {!useSandbox && (
-                <div className="flex items-center gap-1.5 text-yellow-500 font-bold uppercase tracking-wider animate-pulse">
-                    <AlertCircle size={12} />
-                    <span className="text-[10px]">
-                        Compatibility Mode {isAntiSandboxDomain ? "(Auto)" : ""}
-                    </span>
-                </div>
+              <div className="flex items-center gap-1.5 text-yellow-500 font-bold uppercase tracking-wider animate-pulse">
+                <AlertCircle size={12} />
+                <span className="text-[10px]">
+                  Compatibility Mode {isAntiSandboxDomain ? "(Auto)" : ""}
+                </span>
+              </div>
             )}
           </div>
           <div className="flex items-center gap-2">
@@ -108,7 +108,7 @@ export default function StreamPlayer({ url: initialUrl, name, streams, onClose }
             </button>
           </div>
         </div>
-        
+
         {/* Main Content Area */}
         <div className="flex-1 flex overflow-hidden">
           {/* Video Section (80%) */}
@@ -134,15 +134,15 @@ export default function StreamPlayer({ url: initialUrl, name, streams, onClose }
                 Channels
               </h3>
             </div>
-            
+
             <div className="flex-1 overflow-y-auto p-3 space-y-2 custom-scrollbar">
               {streams.map((stream) => (
                 <button
                   key={stream.id}
                   onClick={() => setUrl(stream.url)}
                   className={`w-full flex flex-col gap-1 p-3 rounded-xl transition-all duration-200 text-left group
-                    ${url === stream.url 
-                      ? 'bg-primary text-white shadow-lg shadow-primary/20' 
+                    ${url === stream.url
+                      ? 'bg-primary text-white shadow-lg shadow-primary/20'
                       : 'bg-zinc-800/50 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-zinc-700/50'
                     }`}
                 >
@@ -155,17 +155,17 @@ export default function StreamPlayer({ url: initialUrl, name, streams, onClose }
                   </span>
                 </button>
               ))}
-              
+
               {streams.length === 0 && (
                 <div className="flex flex-col items-center justify-center h-full text-zinc-500 px-4 text-center py-10">
-                   <AlertCircle size={32} className="mb-2 opacity-20" />
-                   <p className="text-xs">No more channels available for this event.</p>
+                  <AlertCircle size={32} className="mb-2 opacity-20" />
+                  <p className="text-xs">No hay más canales disponibles para este evento.</p>
                 </div>
               )}
             </div>
 
             <div className="p-4 bg-black/20 text-[10px] text-zinc-600 italic border-t border-zinc-800">
-              Switch channels if the current one is offline or lagging.
+              Cambia de canal si el actual está desconectado o tiene retraso.
             </div>
           </div>
         </div>

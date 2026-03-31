@@ -25,13 +25,13 @@ export async function fetchGoolHD(): Promise<UnifiedEvent[]> {
     if (!response.ok) throw new Error('API proxy error');
     const result = await response.json();
     
-    return result.data.map((event: any) => ({
+    const events = result.data.map((event: any) => ({
       id: event.id,
       title: event.attributes.diary_description,
       category: event.attributes.deportes,
       date: event.attributes.date_diary,
       time: event.attributes.diary_hour,
-      source: 'goolhd',
+      source: 'goolhd' as const,
       streams: event.attributes.embeds.data.map((embed: any) => {
         const urlParams = new URLSearchParams(embed.attributes.embed_iframe.split('?')[1]);
         const encodedUrl = urlParams.get('r');
@@ -45,6 +45,9 @@ export async function fetchGoolHD(): Promise<UnifiedEvent[]> {
         };
       })
     }));
+
+    // Sort events by time (HH:MM:SS format)
+    return events.sort((a: any, b: any) => a.time.localeCompare(b.time));
   } catch (error) {
     console.error('Error fetching GoolHD via proxy:', error);
     return [];
@@ -59,60 +62,136 @@ export async function fetchTVLibre(): Promise<UnifiedEvent[]> {
     const $ = cheerio.load(html);
     const events: UnifiedEvent[] = [];
 
-    $('ul li').each((i, el) => {
-      const eventLink = $(el).find('a').first();
-      const eventTitleAndPage = eventLink.text().trim();
+    // The main list of events is within ul.menu
+    $('ul.menu > li').each((i, el) => {
+      const mainLink = $(el).children('a').first();
+      const timeSpan = mainLink.find('span').first();
+      const time = timeSpan.text().trim();
       
-      if (eventTitleAndPage.includes(':')) {
-        const [categoryAndTitle, time] = eventTitleAndPage.split('\n');
-        const [category, title] = categoryAndTitle.split(': ');
+      // Get title by removing the time span from the link's text
+      let titleWithCategory = mainLink.text().replace(time, '').trim();
+      
+      // Categorize and clean title
+      let category = 'Deportes';
+      if (titleWithCategory.includes(':')) {
+        const parts = titleWithCategory.split(':');
+        category = parts[0].trim();
+        titleWithCategory = parts.slice(1).join(':').trim();
+      }
 
-        const streams: UnifiedStream[] = [];
-        $(el).find('a').slice(1).each((j, streamEl) => {
-          const streamName = $(streamEl).text().trim();
-          const href = $(streamEl).attr('href') || '';
-          
-          let decodedUrl = href;
-          if (href.includes('?r=')) {
-            const encoded = href.split('?r=')[1];
-            try {
+      const streams: UnifiedStream[] = [];
+      // Nested <ul> contains the stream options
+      $(el).find('ul li a').each((j, streamEl) => {
+        let streamName = $(streamEl).text().trim();
+        const qualitySpan = $(streamEl).find('span').first();
+        const quality = qualitySpan.text().trim();
+        
+        // Clean stream name
+        streamName = streamName.replace(quality, '').trim();
+        
+        const href = $(streamEl).attr('href') || '';
+        let decodedUrl = href;
+        
+        if (href.startsWith('/')) {
+          decodedUrl = `https://tv-libre.net${href}`;
+        }
+        
+        if (href.includes('?r=')) {
+          const encoded = href.split('?r=')[1];
+          try {
+            // Check if the encoded string is actually base64 or just a plain URL
+            if (encoded.match(/^[A-Za-z0-9+/=]+$/)) {
               decodedUrl = atob(encoded);
-            } catch (e) {
-              console.error('Error decoding TVLibre link:', e);
+            } else {
+              decodedUrl = decodeURIComponent(encoded);
             }
-          } else if (href.startsWith('/')) {
-              // Handle relative internal links by prepending the base domain
-              decodedUrl = `https://tvlibree.com${href}`;
-          } else if (href.startsWith('en-vivo/') || href.startsWith('eventos/')) {
-              // Handle other relative formats
-              decodedUrl = `https://tvlibree.com/${href}`;
+          } catch (e) {
+            console.error('Error decoding TVLibre link:', e);
           }
+        }
 
-          if (streamName && !streamName.includes('Agenda')) {
-            streams.push({
-              id: `tvl-s-${i}-${j}`,
-              name: streamName.replace('Calidad 720p', '').trim(),
-              language: 'Español',
-              url: decodedUrl
-            });
-          }
-        });
-
-        if (streams.length > 0) {
-          events.push({
-            id: `tvl-${i}`,
-            title: (title || categoryAndTitle).trim(),
-            category: (category || 'Deportes').trim(),
-            date: new Date().toLocaleDateString(),
-            time: (time || 'N/A').trim(),
-            source: 'tvlibre',
-            streams: streams
+        if (streamName && !streamName.toLowerCase().includes('agenda')) {
+          streams.push({
+            id: `tvl-s-${i}-${j}`,
+            name: streamName,
+            language: 'Español',
+            url: decodedUrl
           });
         }
+      });
+
+      if (streams.length > 0) {
+        // Source uses CET/UTC+1 (60 minutes). Convert to local time.
+        let localTime = time || 'N/A';
+        if (time && time.includes(':')) {
+          try {
+            const [hStr, mStr] = time.trim().split(':');
+            const h = parseInt(hStr, 10);
+            const m = parseInt(mStr.slice(0, 2), 10); // Handle characters after minutes like am/pm if present
+            
+            const eventDate = new Date();
+            eventDate.setHours(h, m, 0, 0);
+            
+            const userHuso = eventDate.getTimezoneOffset() * -1;
+            // The site's base timezone is UTC+1 (60 mins)
+            const adjustedDate = new Date(eventDate.getTime() - (60 - userHuso) * 60000);
+            
+            const hours = adjustedDate.getHours();
+            const minutes = adjustedDate.getMinutes();
+            const ampm = hours >= 12 ? 'pm' : 'am';
+            const displayHours = hours % 12 || 12;
+            const displayMinutes = minutes < 10 ? `0${minutes}` : minutes;
+            
+            localTime = `${displayHours}:${displayMinutes}${ampm}`;
+          } catch (e) {
+            console.error('Error calculating local time for TVLibre:', e);
+          }
+        }
+
+        events.push({
+          id: `tvl-${i}`,
+          title: titleWithCategory || 'Evento en vivo',
+          category: category,
+          date: new Date().toLocaleDateString('es-ES'),
+          time: localTime,
+          source: 'tvlibre',
+          streams: streams
+        });
       }
     });
 
-    return events;
+    // Helper to convert time string (e.g., "20:30", "11:00am", "2:30pm") to minutes from start of day
+    const timeToMinutes = (timeStr: string) => {
+      if (!timeStr || timeStr === 'N/A') return 9999;
+      
+      const cleanTime = timeStr.trim().toLowerCase();
+      
+      // Try AM/PM format first
+      const amPmMatch = cleanTime.match(/(\d+):(\d+)\s*(am|pm)/);
+      if (amPmMatch) {
+        let hours = parseInt(amPmMatch[1], 10);
+        const minutes = parseInt(amPmMatch[2], 10);
+        const period = amPmMatch[3];
+        
+        if (period === 'pm' && hours < 12) hours += 12;
+        if (period === 'am' && hours === 12) hours = 0;
+        
+        return hours * 60 + minutes;
+      }
+      
+      // Try 24-hour format
+      const twentyFourMatch = cleanTime.match(/(\d+):(\d+)/);
+      if (twentyFourMatch) {
+        const hours = parseInt(twentyFourMatch[1], 10);
+        const minutes = parseInt(twentyFourMatch[2], 10);
+        return hours * 60 + minutes;
+      }
+      
+      return 9999;
+    };
+
+    // Sort events by time ascending
+    return events.sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
   } catch (error) {
     console.error('Error fetching TVLibre via proxy:', error);
     return [];
