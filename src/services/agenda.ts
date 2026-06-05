@@ -93,7 +93,7 @@ export async function fetchTVLibre(): Promise<UnifiedEvent[]> {
         let decodedUrl = href;
         
         if (href.startsWith('/')) {
-          decodedUrl = `https://tv-libre.net${href}`;
+          decodedUrl = `https://tvlibre-online.com${href}`;
         }
         
         if (href.includes('?r=')) {

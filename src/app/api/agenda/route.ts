@@ -6,7 +6,7 @@ export const revalidate = 0;
 
 //const GOOLHD_API_URL = 'https://goolhd.com/agenda.json?v=1.07';
 const GOOLHD_API_URL = 'https://goolhd.com/agenda.json?v=1.11';
-const TVLIBRE_PAGE_URL = 'http://tv-libre.net/agenda/';
+const TVLIBRE_PAGE_URL = 'https://tvlibre-online.com/agenda/';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -32,7 +32,7 @@ export async function GET(request: Request) {
           'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
           'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
           'Cache-Control': 'no-cache',
-          'Referer': 'http://tv-libre.net/',
+          'Referer': 'https://tvlibre-online.com/',
         }
       });
       const html = await response.text();
